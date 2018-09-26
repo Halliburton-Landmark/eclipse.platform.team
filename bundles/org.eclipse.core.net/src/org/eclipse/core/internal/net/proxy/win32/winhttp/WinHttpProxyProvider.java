@@ -107,6 +107,10 @@ public class WinHttpProxyProvider {
 		if (newProxyConfig.autoConfigUrlChanged(proxyConfig))
 			tryPac = newProxyConfig.isAutoConfigUrl();
 
+		if (tryWpadGetUrl) {
+			detectWpadAutoConfigUrl();
+		}
+
 		if (!tryPac && wpadAutoConfigUrl == null)
 			return new IProxyData[0];
 
@@ -219,20 +223,6 @@ public class WinHttpProxyProvider {
 	}
 
 	protected void wpadSelect(int hHttpSession, URI uri, List<IProxyData> proxies) {
-		if (tryWpadGetUrl) {
-			tryWpadGetUrl = false;
-			AutoProxyHolder autoProxyHolder = new AutoProxyHolder();
-			autoProxyHolder
-					.setAutoDetectFlags(WinHttpAutoProxyOptions.WINHTTP_AUTO_DETECT_TYPE_DHCP
-							| WinHttpAutoProxyOptions.WINHTTP_AUTO_DETECT_TYPE_DNS_A);
-			boolean ok = WinHttp.detectAutoProxyConfigUrl(autoProxyHolder);
-			if (!ok) {
-				logError(
-						"WinHttp.DetectAutoProxyConfigUrl for wpad failed with error '" + WinHttp.getLastErrorMessage() + "' #" + WinHttp.getLastError() + ".", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-				return;
-			}
-			wpadAutoConfigUrl = autoProxyHolder.getAutoConfigUrl();
-		}
 		if (wpadAutoConfigUrl == null)
 			return;
 		List<IProxyData> wpadProxies = pacSelect(hHttpSession, wpadAutoConfigUrl, uri);
@@ -241,6 +231,23 @@ public class WinHttpProxyProvider {
 		else
 			proxies.addAll(wpadProxies);
 	}
+
+	private void detectWpadAutoConfigUrl() {
+		tryWpadGetUrl = false;
+		wpadAutoConfigUrl = null;
+		AutoProxyHolder autoProxyHolder = new AutoProxyHolder();
+		autoProxyHolder
+				.setAutoDetectFlags(WinHttpAutoProxyOptions.WINHTTP_AUTO_DETECT_TYPE_DHCP
+						| WinHttpAutoProxyOptions.WINHTTP_AUTO_DETECT_TYPE_DNS_A);
+		boolean ok = WinHttp.detectAutoProxyConfigUrl(autoProxyHolder);
+		if (!ok) {
+			logError(
+					"WinHttp.DetectAutoProxyConfigUrl for wpad failed with error '" + WinHttp.getLastErrorMessage() + "' #" + WinHttp.getLastError() + ".", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			return;
+		}
+		wpadAutoConfigUrl = autoProxyHolder.getAutoConfigUrl();
+	}
+
 
 	/**
 	 * Retrieve the proxies from the specified pac file url.
