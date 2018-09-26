@@ -104,6 +104,10 @@ public class WinHttpProxyProvider {
 		if (newProxyConfig.autoConfigUrlChanged(proxyConfig))
 			tryPac = newProxyConfig.isAutoConfigUrl();
 
+		if (tryWpadGetUrl) {
+			detectWpadAutoConfigUrl();
+		}
+
 		if (!tryPac && wpadAutoConfigUrl == null)
 			return new IProxyData[0];
 
@@ -216,8 +220,18 @@ public class WinHttpProxyProvider {
 	}
 
 	protected void wpadSelect(int hHttpSession, URI uri, List proxies) {
-		if (tryWpadGetUrl) {
+		if (wpadAutoConfigUrl == null)
+			return;
+		List wpadProxies = pacSelect(hHttpSession, wpadAutoConfigUrl, uri);
+		if (wpadProxies == null)
+			wpadAutoConfigUrl = null;
+		else
+			proxies.addAll(wpadProxies);
+	}
+
+	private void detectWpadAutoConfigUrl() {
 			tryWpadGetUrl = false;
+		wpadAutoConfigUrl = null;
 			AutoProxyHolder autoProxyHolder = new AutoProxyHolder();
 			autoProxyHolder
 					.setAutoDetectFlags(WinHttpAutoProxyOptions.WINHTTP_AUTO_DETECT_TYPE_DHCP
@@ -230,14 +244,6 @@ public class WinHttpProxyProvider {
 			}
 			wpadAutoConfigUrl = autoProxyHolder.getAutoConfigUrl();
 		}
-		if (wpadAutoConfigUrl == null)
-			return;
-		List wpadProxies = pacSelect(hHttpSession, wpadAutoConfigUrl, uri);
-		if (wpadProxies == null)
-			wpadAutoConfigUrl = null;
-		else
-			proxies.addAll(wpadProxies);
-	}
 
 	/**
 	 * Retrieve the proxies from the specified pac file url.
